@@ -5,11 +5,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -32,58 +28,77 @@ public class EnergyUtils {
     
     
 
-	public static String getToken(String pAPIKEY) throws IOException, InterruptedException {
-		
-		System.out.println("getAPIKey...");	  
-		Connection dbConnection = null;
-		
-		String dbURL = "jdbc:oracle:thin:@(DESCRIPTION= (ADDRESS= (PROTOCOL=TCP) (HOST=192.168.0.242) (PORT=1521)) (CONNECT_DATA= (SERVICE_NAME=XEPDB1)))";
-        String strUserID = "workspace";
-        String strPassword = "S0r0ver";
-
+	public static String getToken(String location) throws IOException, InterruptedException {
+		String privateApiKey = null;
 		String token = null;
-        Date   issueDate = new Date(0, 1, 1);
-        try {        	
-        	dbConnection=DriverManager.getConnection(dbURL,strUserID,strPassword);
-			Statement stmt = dbConnection.createStatement();		
-       	
-			String sql="select * from energy_apikey where privateAPIKEY='" + pAPIKEY + "'";
-			System.out.println("SQL=" + sql);	
-			ResultSet rs = stmt.executeQuery(sql);
-			while (rs.next()) {
-				token = rs.getString("TOKEN");		
-				issueDate = rs.getDate("ISSUEDATE");		
+		Date issueDate = null;
+		System.out.println("getAPIKey...");	  
+		DButils dbUtil = new DButils();
+		try {
+			dbUtil.getConnection();
+			dbUtil.createStatement();
+
+			String sql="select * from energy_apikey where location='" + location + "'";
+			System.out.println("SQL=" + sql);
+			dbUtil.resultSet = dbUtil.dbStatement.executeQuery(sql);
+			if (dbUtil.resultSet.next()) {
+				token = dbUtil.resultSet.getString("TOKEN");
+				issueDate = dbUtil.resultSet.getDate("ISSUEDATE");
+				privateApiKey = dbUtil.resultSet.getString("PRIVATEAPIKEY");
+				System.out.println("issueDate="+issueDate);
+
+				Date currentDate = new Date();
+				Date expireDate = currentDate;
+
+				if (issueDate!=null) {
+					Calendar c = Calendar.getInstance();
+					c.setTime(issueDate);
+					c.add(Calendar.DATE, 1);
+					expireDate = c.getTime();
+					System.out.println("expireDate="+expireDate);
+				}
+
+
+				if ((currentDate.compareTo(expireDate) > 0) || (token==null) ){
+					System.out.println("Token has expired, requesting new one");
+					token = requestToken(privateApiKey);
+					if (token!=null)
+						storeAPIKey(location,privateApiKey,token);
+				}
+
 			}
-			
-			rs.close();
-			stmt.close();
-			dbConnection.close();
 
-		
-        }  catch (SQLException ex) {
-            ex.printStackTrace();        
-		} finally {        	   
-        	System.out.println(" ");
-        }	        
-        System.out.println("issueDate="+issueDate);
+			dbUtil.resultSet.close();
+			dbUtil.dbStatement.close();
+			dbUtil.dbConnection.close();
 
 
-        Date currentDate = new Date();
-        
-        Calendar c = Calendar.getInstance();
-        c.setTime(issueDate);
-        c.add(Calendar.DATE, 1);
-        Date expireDate = c.getTime();
-        System.out.println("expireDate="+expireDate);
+		} catch (SQLException e) {
+			return "NA"; //throw new RuntimeException(e);
+		}
 
-
-        if(currentDate.compareTo(expireDate) > 0) {         
-        	System.out.println("Token has expired, requesting new one");
-        	token = requestToken(pAPIKEY);		
-        	storeAPIKey(pAPIKEY,token); 
-        }        
-        return token;
+		return token;
 	}
+
+
+	public static String getLocation(String token) throws IOException, InterruptedException {
+		System.out.println("token="+token);
+
+		HttpRequest request = HttpRequest.newBuilder()
+				.GET()
+				.uri(URI.create("https://api.eloverblik.dk/customerapi/api/meteringpoints/meteringpoints?includeAll=false"))
+				.setHeader("User-Agent", "Java 11 HttpClient Bot")
+				.setHeader("Authorization", "Bearer " + token)
+				.build();
+
+		HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+		System.out.println("response.statusCode=" + response.statusCode());
+		//System.out.println("response.body=" + response.body());
+		return response.body();
+
+	}
+
+
 
 
 	public static String requestToken(String pAPIKEY) throws IOException, InterruptedException {
@@ -121,27 +136,22 @@ public class EnergyUtils {
 	
 
     
-	public static void storeAPIKey(String pKey,String pToken) {
+	public static void storeAPIKey(String location,String pKey,String pToken) {
 		
-		System.out.println("storeAPIKey...");	  
-		Connection dbConnection = null;
-		
-		String dbURL = "jdbc:oracle:thin:@(DESCRIPTION= (ADDRESS= (PROTOCOL=TCP) (HOST=192.168.0.242) (PORT=1521)) (CONNECT_DATA= (SERVICE_NAME=XEPDB1)))";
-        String strUserID = "workspace";
-        String strPassword = "S0r0ver";
+		System.out.println("storeAPIKey...");
+		DButils dbUtil = new DButils();
+		try {
+			dbUtil.getConnection();
+			dbUtil.createStatement();
 
-        try {        	
-        	dbConnection=DriverManager.getConnection(dbURL,strUserID,strPassword);
-        	
-        	String sql="delete from energy_apikey where privateAPIKEY='" + pKey + "'";
-        	Statement stmt = dbConnection.createStatement();		
-			stmt.execute(sql);
+        	String sql="delete from energy_apikey where location='" + location + "'";
+			dbUtil.dbStatement.execute(sql);
 						
-			sql="insert into energy_apikey values ('" +  pKey + "','" + pToken + "',sysdate)";
-			System.out.println("SQL=" + sql);	
-			stmt.execute(sql);
-			stmt.close();
-			dbConnection.close();
+			sql="insert into energy_apikey values ('" +  pKey + "','" + pToken + "',sysdate,'" + location + "')";
+			System.out.println("SQL=" + sql);
+			dbUtil.dbStatement.execute(sql);
+			dbUtil.dbStatement.close();
+			dbUtil.dbConnection.close();
 
 		
         }  catch (SQLException ex) {
@@ -157,15 +167,19 @@ public class EnergyUtils {
 		String inputJson = " {\r\n"
 		+ "  \"meteringPoints\": {\r\n"
 		+ "    \"meteringPoint\": [\r\n"
-		+ "      \"571313181101166362\"\r\n"
+//		+ "      \"571313181101166362\"\r\n"
+		+ "      \"571313181101164504\"\r\n"
 		+ "    ]\r\n"
 		+ "  }\r\n"
 		+ "}";
-		
+
+		String apiURI = "https://api.eloverblik.dk/customerapi/api/meterdata/gettimeseries/" + pFromDate + "/" + pToDate + "/Hour";
+		System.out.println("apiURL=" + apiURI);
+
 		HttpRequest request = HttpRequest.newBuilder()
 				.POST(HttpRequest.BodyPublishers.ofString(inputJson))
 //		        .uri(URI.create("https://api.eloverblik.dk/customerapi/api/meterdata/getmeterreadings/" + pFromDate + "/" + pToDate))
-		        .uri(URI.create("https://api.eloverblik.dk/customerapi/api/meterdata/gettimeseries/" + pFromDate + "/" + pToDate + "/Day"))
+		        .uri(URI.create(apiURI))
 		        .setHeader("User-Agent", "Java 11 HttpClient Bot")
 		        .setHeader("Authorization", "Bearer " + pAPIKey)
 		        .setHeader("Accept", "application/json")
@@ -207,35 +221,35 @@ public class EnergyUtils {
 	
 
     
-    public static void storeMetering(List<MeteringPoint> meteringPointList) {
+    public static void storeMetering(String location,List<MeteringPoint> meteringPointList) {
     	
-    	System.out.println("storeMetering...");	  
-		Connection dbConnection = null;
-		
-		String dbURL = "jdbc:oracle:thin:@(DESCRIPTION= (ADDRESS= (PROTOCOL=TCP) (HOST=192.168.0.242) (PORT=1521)) (CONNECT_DATA= (SERVICE_NAME=XEPDB1)))";
-        String strUserID = "workspace";
-        String strPassword = "S0r0ver";
+    	System.out.println("storeMetering..." + meteringPointList.size() );
+		DButils dbUtil = new DButils();
+		try {
+			dbUtil.getConnection();
+			dbUtil.createStatement();
+        	DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
 
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-		
-        try {        	
-        	dbConnection=DriverManager.getConnection(dbURL,strUserID,strPassword);
-        	Statement stmt = dbConnection.createStatement();		
-    		
+
         	for (int i=0;i<meteringPointList.size();i++) {
     			String startDate = df.format(meteringPointList.get(i).getStartDate());
-    			String endDate = df.format(meteringPointList.get(i).getEndDate());
     			float qty = meteringPointList.get(i).getQuantity();
+    			int   pos = meteringPointList.get(i).getPosition();
+
+    			String sql="delete from energy_metering where location='" + location + "'" +
+						   " and  startdate=to_date('" + startDate +"','YYYY-MM-DD')" +
+						   " and position=" + pos;
+				dbUtil.dbStatement.execute(sql);
     			
-    			String sql="delete from energy_metering where startdate=to_date('" + startDate +"','YYYY-MM-DD')";
-    			stmt.execute(sql);
-    			
-    			sql="insert into energy_metering values (to_date('" + startDate +"','YYYY-MM-DD'),to_date('" + endDate +"','YYYY-MM-DD'),"+ qty +")";
-    			stmt.execute(sql);
-    		}        	
-        				
-			stmt.close();
-			dbConnection.close();
+    			sql="insert into energy_metering (LOCATION,STARTDATE,POSITION,METERING) " +
+						                 "values " +
+						                       "('" + location + "',to_date('" + startDate +"','YYYY-MM-DD')," + pos + "," + qty + ")";
+
+				dbUtil.dbStatement.execute(sql);
+    		}
+
+			dbUtil.dbStatement.close();
+			dbUtil.dbConnection.close();
 
 
 		
@@ -267,26 +281,29 @@ public class EnergyUtils {
 	
 			JSONObject pointObject = (JSONObject) periodArray.get(i);
 			//System.out.println("pointObject="+pointObject.get("Point"));	
-			JSONArray c = (JSONArray) pointObject.get("Point");
+			JSONArray pointArray = (JSONArray) pointObject.get("Point");
 			//System.out.println("c="+c.get(0));
-			JSONObject v = (JSONObject) c.get(0);
-	
-			MeteringPoint m = new MeteringPoint();
-			
-			SimpleDateFormat formatter = new SimpleDateFormat("yyy-MM-dd'T'HH:mm:ss");
-			Date date = (Date) formatter.parse(f.get("start").toString());
-			date = addHoursToJavaUtilDate(date,2);
-			m.setStartDate(date);
-			
-			date = (Date) formatter.parse(f.get("end").toString());
-			date = addHoursToJavaUtilDate(date,2);			
-			m.setEndDate(date);			
-			m.setQuantity( (float) Double.parseDouble(v.get("out_Quantity.quantity").toString()));
-			
-			meteringPointList.add(m);
+			for (int p=0;p<pointArray.length();p++) {
+
+				JSONObject v = (JSONObject) pointArray.get(p);
+
+				MeteringPoint m = new MeteringPoint();
+
+				SimpleDateFormat formatter = new SimpleDateFormat("yyy-MM-dd'T'HH:mm:ss");
+				Date date = (Date) formatter.parse(f.get("start").toString());
+				date = addHoursToJavaUtilDate(date, 2);
+				m.setStartDate(date);
+
+				date = (Date) formatter.parse(f.get("end").toString());
+				date = addHoursToJavaUtilDate(date, 2);
+				m.setQuantity((float) Double.parseDouble(v.get("out_Quantity.quantity").toString()));
+				m.setPosition(p);
+				//System.out.println(p + ":" + m.getQuantity());
+				meteringPointList.add(m);
+			}
 		}
-			
-		
+
+		System.out.println("meteringPointList.size()=" + meteringPointList.size());
 		return meteringPointList;
 		
 		
