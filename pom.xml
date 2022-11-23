@@ -167,6 +167,14 @@
 		</dependency>
 
 
+		<dependency>
+			<groupId>com.sun</groupId>
+			<artifactId>tools</artifactId>
+			<version>17</version>
+			<scope>system</scope>
+			<systemPath>c:\java17\lib\tools.jar</systemPath>
+		</dependency>
+
 
 
 	</dependencies>

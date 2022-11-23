@@ -28,7 +28,9 @@ public class EnergyController{
 							@PathVariable("toDate") String toDate) throws IOException, InterruptedException, JSONException, ParseException {
 
 		String token=EnergyUtils.getToken(location);
-		JSONObject meteringJSON = EnergyUtils.requestMetering(token,fromDate,toDate);
+		String meteringPointId=EnergyUtils.getMeteringPointId();
+
+		JSONObject meteringJSON = EnergyUtils.requestMetering(token,meteringPointId,fromDate,toDate);
 		List<MeteringPoint> meteringPointList = EnergyUtils.getMeteringPoints((JSONObject) meteringJSON);
 		EnergyUtils.storeMetering(location,meteringPointList);
 		return "ok..."; //meteringJSON.toString(5);

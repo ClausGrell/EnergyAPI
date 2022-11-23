@@ -21,6 +21,8 @@ import org.json.JSONObject;
         
 public class EnergyUtils {
 
+	private static String meteringPointId;
+
     private static final HttpClient httpClient = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(10))
@@ -45,6 +47,7 @@ public class EnergyUtils {
 				token = dbUtil.resultSet.getString("TOKEN");
 				issueDate = dbUtil.resultSet.getDate("ISSUEDATE");
 				privateApiKey = dbUtil.resultSet.getString("PRIVATEAPIKEY");
+				meteringPointId = dbUtil.resultSet.getString("METERINGPOINTID");
 				System.out.println("issueDate="+issueDate);
 
 				Date currentDate = new Date();
@@ -163,12 +166,11 @@ public class EnergyUtils {
 
 	
 	
-	public static JSONObject requestMetering(String pAPIKey,String pFromDate, String pToDate) throws IOException, InterruptedException {
+	public static JSONObject requestMetering(String pAPIKey,String location, String pFromDate, String pToDate) throws IOException, InterruptedException {
 		String inputJson = " {\r\n"
 		+ "  \"meteringPoints\": {\r\n"
 		+ "    \"meteringPoint\": [\r\n"
-//		+ "      \"571313181101166362\"\r\n"
-		+ "      \"571313181101164504\"\r\n"
+		+ "      \"" + location + "\"\r\n"
 		+ "    ]\r\n"
 		+ "  }\r\n"
 		+ "}";
@@ -188,7 +190,7 @@ public class EnergyUtils {
 
 		HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 		System.out.println("#response.statusCode=" + response.statusCode());
-		//System.out.println("response.body=" + response.body());
+		System.out.println("response.body=" + response.body());
 
 		String jsonString = response.body();
 
@@ -316,7 +318,14 @@ public class EnergyUtils {
 	    calendar.add(Calendar.HOUR_OF_DAY, hours);
 	    return calendar.getTime();
 	}
-	
-	
+
+
+	public static String getMeteringPointId() {
+		return meteringPointId;
+	}
+
+	public void setMeteringPointId(String meteringPointId) {
+		this.meteringPointId = meteringPointId;
+	}
 	
 }

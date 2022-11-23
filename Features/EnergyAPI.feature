@@ -9,7 +9,7 @@ Feature: EnergyAPI
 
   Scenario: Requesting metering points
     Given I invoke a valid token "MAAGEVAENGET"
-   # When I request meter data from "2022-11-01" to "2022-11-21"
+   # When I request meter data from "2022-11-01" to "2022-11-15 "
    # Then Verify that the response contains 15 days of data
    # And Close
 
