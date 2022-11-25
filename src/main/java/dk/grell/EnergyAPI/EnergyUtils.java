@@ -328,7 +328,7 @@ public class EnergyUtils {
 	}
 
 
-	public static void requestMeterData(String location, String fromDate, String toDate) throws ParseException, IOException, InterruptedException {
+	public static JSONObject requestMeterData(String location, String fromDate, String toDate) throws ParseException, IOException, InterruptedException {
 
 		System.out.println("Getting token....");
 		String token = EnergyUtils.getToken(location);
@@ -339,7 +339,7 @@ public class EnergyUtils {
 		JSONObject meteringJSON = EnergyUtils.requestMetering(token, meteringPointId, fromDate, toDate);
 		List<MeteringPoint> meteringPointList = EnergyUtils.getMeteringPoints((JSONObject) meteringJSON);
 		EnergyUtils.storeMetering(location, meteringPointList);
-		//return "ok..."; //meteringJSON.toString(5);
+		return meteringJSON;
 	}
 
 		

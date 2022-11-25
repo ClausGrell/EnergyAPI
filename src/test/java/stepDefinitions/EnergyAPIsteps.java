@@ -80,6 +80,7 @@ public class EnergyAPIsteps {
 
 	@Then("Verify that the response contains {int} days of data")
 	public void verifyThatTheResponseContainsDaysOfData(int numbersOfDays) throws ParseException {
+		System.out.println("Verify result " + numbersOfDays);
 		List<MeteringPoint> meteringPointList = EnergyUtils.getMeteringPoints((JSONObject) jsonObject);
 
 		System.out.println("Længde af listen: " + meteringPointList.size());
@@ -90,6 +91,6 @@ public class EnergyAPIsteps {
 
 	@When("I request meter data from {string} to {string} from location {string}")
 	public void iRequestMeterDataFromTo(String pFromDate, String pToDate, String location) throws IOException, InterruptedException, ParseException {
-		EnergyUtils.requestMeterData(location,pFromDate,pToDate);
+		jsonObject = EnergyUtils.requestMeterData(location,pFromDate,pToDate);
 	}
 }
