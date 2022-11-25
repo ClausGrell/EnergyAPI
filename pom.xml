@@ -172,7 +172,7 @@
 			<artifactId>tools</artifactId>
 			<version>17</version>
 			<scope>system</scope>
-			<systemPath>c:\java17\lib\tools.jar</systemPath>
+			<systemPath>${pom.basedir}\lib\tools.jar</systemPath>
 		</dependency>
 
 

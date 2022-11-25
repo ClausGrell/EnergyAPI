@@ -38,9 +38,9 @@ public class EnergyAPIsteps {
 	public void InvokeAValidToken(String pAPIKEY) throws IOException, InterruptedException {
 		System.out.println("InvokeAValidToken(" + pAPIKEY + ")");
 		token = EnergyUtils.getToken(pAPIKEY);
-//		String meteringPoints = EnergyUtils.getLocation(token);
+//		String meteringPoints = EnergyUtils.requestMeteringLocation(token);
 //		System.out.println("meteringPoints=" + meteringPoints);
-		System.out.println("length=" + token.length() );
+//		System.out.println("length=" + token.length() );
 		assertTrue(true); //token.length()==788);
 	}
 
@@ -88,8 +88,8 @@ public class EnergyAPIsteps {
 	}
 
 
-	@When("I request meter data from {string} to {string}")
-	public void iRequestMeterDataFromTo(String pFromDate, String pToDate) throws IOException, InterruptedException {
-		jsonObject = EnergyUtils.requestMetering(token,pFromDate,pToDate);
+	@When("I request meter data from {string} to {string} from location {string}")
+	public void iRequestMeterDataFromTo(String pFromDate, String pToDate, String location) throws IOException, InterruptedException, ParseException {
+		EnergyUtils.requestMeterData(location,pFromDate,pToDate);
 	}
 }

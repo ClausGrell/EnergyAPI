@@ -8,8 +8,8 @@ Feature: EnergyAPI
     And Close
 
   Scenario: Requesting metering points
-    Given I invoke a valid token "MAAGEVAENGET"
-   # When I request meter data from "2022-11-01" to "2022-11-15 "
-   # Then Verify that the response contains 15 days of data
+    Given I invoke a valid token "HOLBERGSVEJ"
+    When I request meter data from "2022-11-20" to "2022-11-21" from location "HOLBERGSVEJ"
+    Then Verify that the response contains 24 days of data
    # And Close
 
