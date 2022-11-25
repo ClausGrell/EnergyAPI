@@ -172,8 +172,9 @@
 			<artifactId>tools</artifactId>
 			<version>17</version>
 			<scope>system</scope>
-			<systemPath>${pom.basedir}\lib\tools.jar</systemPath>
+			<systemPath>${pom.basedir}/lib/tools.jar</systemPath>
 		</dependency>
+
 
 
 
