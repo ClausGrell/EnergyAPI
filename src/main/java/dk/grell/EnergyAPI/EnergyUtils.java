@@ -352,7 +352,6 @@ public class EnergyUtils {
 
 
 
-
 	public static String getMeteringPointId() {
 		return meteringPointId;
 	}
